@@ -4,6 +4,7 @@ from matplotlib import pyplot as plt
 from numba import jit
 # Create the environment
 import time
+import pandas as pd
 
 
 
@@ -13,8 +14,8 @@ def testy(theta_num, theta_dot_num, actions_num, masa):
     l = 1.0  # length of the pendulum
     g = 9.81  # acceleration due to gravity
     dt = 0.05  # time step for integration
-    env = gym.make('Pendulum-v1', g=g)
-
+    env = gym.make('Pendulum-v1', g=g, render_mode = "human")
+    
     # Discretization parameters
     num_theta = theta_num
     num_thetadot = theta_dot_num
@@ -58,7 +59,7 @@ def testy(theta_num, theta_dot_num, actions_num, masa):
         theta, thetadot = state
         u = action
 
-        reward = - ((theta)**2 + 0.1 * (thetadot**2) + 0.001 * (u**2))
+        reward = - ((theta)**2 +0.1 * thetadot**2 +  0.001 * (u**2))
         newthdot = thetadot + (3 * g / (2 * l) * np.sin(theta) + 3.0 / (m * l**2) * u) * dt
 
         if newthdot < thetadot_min:
@@ -99,6 +100,7 @@ def testy(theta_num, theta_dot_num, actions_num, masa):
                     delta = max(delta, abs(new_V[theta_idx, thetadot_idx] - V[theta_idx, thetadot_idx]))
             V = new_V
             if delta < tol:
+                print("error")
                 break
         return V, policy
 
@@ -112,28 +114,33 @@ def testy(theta_num, theta_dot_num, actions_num, masa):
     eval_time = eval_time * 1e-9
     eval_time = round(eval_time, 4)
     fig = plt.figure(figsize=(9, 4))
-    ax1, ax2 = fig.subplots(1, 2)
-    ax1.set_xlabel("q")
-    ax1.set_ylabel("qdot")
-    ax1.set_title("Cost-to-Go")
-    ax2.set_xlabel("q")
-    ax2.set_ylabel("qdot")
-    ax2.set_title("Policy")
-    ax1.imshow(
+    # ax1, ax2 = fig.subplots(1, 2)
+    plt.subplot(121)
+    plt.xlabel("q")
+    plt.ylabel("qdot")
+    plt.title("Cost-to-Go")
+
+    plt.imshow(
         V.transpose(),
         aspect="auto",
         extent=(theta_grid[0], theta_grid[-1], thetadot_grid[0], thetadot_grid[-1])
     )
-    ax1.invert_yaxis()
+    plt.colorbar()
+
+    # plt.invert_yaxis()
     # Pi = np.reshape(policy.get_output_values(), Q.shape)
-    ax2.imshow(
+    plt.subplot(122)
+    plt.ylabel("qdot")
+    plt.xlabel("q")
+    plt.title("Policy")
+    plt.imshow(
         policy.transpose(),
         aspect="auto",
         extent=(theta_grid[0], theta_grid[-1], thetadot_grid[0], thetadot_grid[-1])
     )
-    ax2.invert_yaxis()
+    plt.colorbar()
     plt.suptitle(f"thetas: {num_theta}, thetas_dot: {num_thetadot}, actions: {num_actions} , t: {eval_time}s", size=14)
-    # plt.savefig(f"graphs/pol_{num_theta}_{num_thetadot}_{num_actions}.pdf")
+    plt.savefig(f"graphs/pol_{num_theta}_{num_thetadot}_{num_actions}.pdf")
     plt.show()
     # plt.close()
     obs,_ = env.reset()
@@ -147,7 +154,6 @@ def testy(theta_num, theta_dot_num, actions_num, masa):
         local_thetas = []
         local_thetas_dot = []
         env.unwrapped.m = m
-        print(m)
         env.unwrapped.state = np.array([np.pi,0])
         theta = 0
         theta_dot = 0
@@ -164,6 +170,11 @@ def testy(theta_num, theta_dot_num, actions_num, masa):
         plt.subplot(2,1,2)
         plt.plot(t, local_thetas_dot, label = f"m={m}")
 
+    y_zad = np.zeros((1, num__of_iter))
+    e_theta = y_zad - local_thetas
+    
+
+    
     plt.subplot(2,1,1)
     plt.legend()
     plt.title("θ(s)")
@@ -180,15 +191,28 @@ def testy(theta_num, theta_dot_num, actions_num, masa):
     # plt.savefig(f"graphs/wyk_{num_theta}_{num_thetadot}_{num_actions}.pdf")
     # plt.close()
     plt.show()
+    return np.sum(e_theta**2 * t * dt)
 
 
-thetas = [201]
-theta_dots = [31]
-actions=[11]
+thetas = [401]
+theta_dots = [51]
+actions=[31]
 
+
+def print_val(vals):
+    str_ = ""
+    for val in vals:
+        str_ += str(round(val,2)) + " & "
+    str_ = str_[: -3]
+    str_ += " \\\ "
+    print(str_)
+
+val = []
 for theta in thetas:
     for theta_dot in theta_dots:
         for action in actions:
-            testy(theta,theta_dot,action, [0.5, 1, 2])
-            print("done")
+            val=[theta, theta_dot, action ,testy(theta,theta_dot,action, [1])]
+            print_val(val)
+            print("\hline")
+
 
